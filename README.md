@@ -130,3 +130,27 @@ Chunk overlap (2 lines by default) ensures rules at chunk boundaries appear in b
 | `rule_extraction_agent.py` | Agent, tools, `Rule` schema, public API |
 | `example.py` | Runnable demo with a sample SLA document |
 | `skeleton_reference.py` | Original design skeleton for reference |
+
+## Background & theory
+
+**Deontic modalities.** The `modality` field is a direct engineering encoding of the classical operators of *deontic logic* — the branch of modal logic that formalises normative language. Von Wright's foundational paper introduced obligation (O), permission (P), and prohibition (¬P) as primitive operators \[1\]. The four-value vocabulary used here (`must`, `must_not`, `may`, `should`) corresponds to those operators and is also the vocabulary standardised in IETF RFC 2119 for technical specifications \[2\].
+
+**Normative language extraction.** Identifying deontic statements in natural-language documents is an active sub-field of information extraction. Key benchmarks include CUAD (expert-labelled legal contract clauses) \[3\] and ContractNLI (document-level NLI for contracts) \[4\]. These datasets highlight the same challenge this agent faces: normative force is often implicit (passive constructions, nominalisations) and clause boundaries are blurry — which is why confidence scoring and verbatim `source_span` anchoring matter.
+
+**Structured output from LLMs.** Rather than parsing free-form text from the model, the extraction sub-agent uses constrained generation (`structured_output_model=RuleList`). This approach follows Willard & Louf's efficient guided generation \[5\], which steers token sampling to stay within a schema-defined grammar, eliminating ad-hoc JSON repair and validation loops.
+
+**Map-reduce chunking.** Long documents exceed a single LLM context window, so the pipeline follows a *map-reduce* pattern: split into overlapping chunks (map), extract per chunk (map), merge and deduplicate (reduce). The two-line overlap at chunk boundaries is a sliding-window heuristic that prevents rules straddling a boundary from being missed — a technique discussed in the context of retrieval-augmented generation \[6\].
+
+**Agentic tool use.** The orchestrator–subagent architecture follows the ReAct paradigm \[7\], in which an LLM interleaves reasoning steps with tool calls. Here the orchestrator is explicitly constrained to a fixed three-step workflow (chunk → extract → merge), trading open-ended planning flexibility for reliability and auditability.
+
+**Strands Agents.** The pipeline is implemented with [Strands Agents](https://strandsagents.com), an open-source Python SDK from AWS that handles tool registration, schema generation, and model dispatch. Tool specs (name, description, JSON schema) are derived automatically from `@tool`-decorated functions' type hints and docstrings, so there is no hand-written glue between the Python functions and the LLM's tool-call interface.
+
+### References
+
+1. Von Wright, G. H. (1951). Deontic Logic. *Mind*, 60(237), 1–15.
+2. Bradner, S. (1997). Key words for use in RFCs to Indicate Requirement Levels. *IETF RFC 2119*.
+3. Hendrycks, D., et al. (2021). CUAD: An Expert-Annotated NLP Dataset for Legal Contract Review. *NeurIPS 2021 Datasets and Benchmarks Track*. arXiv:2103.06268.
+4. Koreeda, Y., & Manning, C. D. (2021). ContractNLI: A Dataset for Document-level Natural Language Inference for Contracts. *Findings of EMNLP 2021*. arXiv:2110.01799.
+5. Willard, B. T., & Louf, R. (2023). Efficient Guided Generation for Large Language Models. arXiv:2307.09702.
+6. Lewis, P., et al. (2020). Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks. *NeurIPS 2020*. arXiv:2005.11401.
+7. Yao, S., et al. (2022). ReAct: Synergizing Reasoning and Acting in Language Models. *ICLR 2023*. arXiv:2210.03629.
