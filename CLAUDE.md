@@ -60,6 +60,34 @@ chunks = chunk_document._tool_func("some long text...", max_chars=500)
 merged = merge_and_deduplicate_rules._tool_func([[rule1, rule2], [rule3]])
 ```
 
+## Sample documents
+
+`sample_docs.py` contains ready-to-use test documents:
+
+| Constant | Domain | Notes |
+|---|---|---|
+| `SLA_DOCUMENT` | Cloud service SLA | Original dev/smoke-test document |
+| `GENERIC_LIFE_UNDERWRITING_DOCUMENT` | Life insurance underwriting | Out-of-domain benchmark document (29 clauses, 6 sections) |
+| `LIFE_INSURANCE_UNDERWRITING_DOCUMENT` | Detailed life insurance underwriting | Longer synthetic document (~100 rules) |
+
+Example runners: `example.py`, `example_generic_underwriting.py`, `example_life_insurance.py`.
+
+## Benchmarking
+
+A silver-labeled dataset and scorer exist for `GENERIC_LIFE_UNDERWRITING_DOCUMENT`:
+
+```bash
+python score.py                                       # run agent + score
+python score.py --dry-run benchmarks/last_run.json   # rescore without re-running
+python score.py --threshold 0.20                      # tune match threshold
+```
+
+Silver labels: `benchmarks/generic_life_underwriting_silver.json` (29 hand-labeled rules).
+
+The scorer uses greedy bipartite matching on Jaccard word-overlap of the `action` field (default threshold 0.30) and reports precision, recall, F1, and per-modality accuracy. Each live run saves output to `benchmarks/last_run.json`.
+
+Latest results: **F1 = 0.90, modality accuracy = 1.00**. See `BENCHMARK_RESULTS.md` for full analysis.
+
 ## Key design constraints
 
 - `source_span` must always be a verbatim copy from the input text — the sub-agent prompt enforces this.
